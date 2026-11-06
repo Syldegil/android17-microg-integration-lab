@@ -1,0 +1,5 @@
+# Provenance and third-party notices
+
+Source hook adapted from LineageOS MicrogUtils: SPDX-FileCopyrightText The LineageOS Project, Apache-2.0. AOSP ComputerEngine: Copyright2021 The Android Open Source Project, Apache-2.0. AOSP UrlFetcher/DomainVerifier portions: Copyright2020 The Android Open Source Project, Apache-2.0. Original helpers, fixtures and export adaptations: Syldegil, Apache-2.0. Full license in LICENSE. Retain these notices with the patch context and derivative source.
+
+The source lock records public AOSP, LineageOS, microG and google/smali revisions. microG is an upstream integration dependency; official presigned APKs and microG sources are not bundled. google/smali is separately acquired under its BSD-3-Clause/per-file notices. GrapheneOS is credited for the CT distribution endpoint; its server is a network dependency, not bundled code. No invention, first-publication or endorsement claim is made. Private coordination archives, images, sessions and source history are excluded.

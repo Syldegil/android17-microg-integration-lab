@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: Apache-2.0
+# Certificate allowlist derived from LineageOS MicrogUtils.java.
+.class final Lcom/android/server/pm/MicrogSignaturePolicy;
+.super Ljava/lang/Object;
+
+.method public static apply(Lcom/android/server/pm/pkg/PackageStateInternal;Landroid/content/pm/PackageInfo;J)V
+    .registers 12
+    if-eqz p0, :done
+    if-eqz p1, :done
+    invoke-interface {p0}, Lcom/android/server/pm/pkg/PackageState;->isSystem()Z
+    move-result v0
+    if-eqz v0, :done
+    invoke-interface {p0}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPkg()Lcom/android/internal/pm/parsing/pkg/AndroidPackageInternal;
+    move-result-object v0
+    if-eqz v0, :done
+    invoke-interface {v0}, Lcom/android/server/pm/pkg/AndroidPackage;->getPackageName()Ljava/lang/String;
+    move-result-object v1
+    const-string v2, "com.google.android.gms"
+    invoke-virtual {v2, v1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v2
+    if-nez v2, :allowed_name
+    const-string v2, "com.android.vending"
+    invoke-virtual {v2, v1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v2
+    if-eqz v2, :done
+    :allowed_name
+    invoke-interface {v0}, Lcom/android/server/pm/pkg/AndroidPackage;->getSigningDetails()Landroid/content/pm/SigningDetails;
+    move-result-object v1
+    if-eqz v1, :done
+    const/4 v2, 0x1
+    new-array v3, v2, [Landroid/content/pm/Signature;
+    new-instance v4, Landroid/content/pm/Signature;
+    const-string v5, "@REAL_CERT@"
+    invoke-direct {v4, v5}, Landroid/content/pm/Signature;-><init>(Ljava/lang/String;)V
+    const/4 v6, 0x0
+    aput-object v4, v3, v6
+    invoke-static {v1, v3}, Landroid/content/pm/Signature;->areExactMatch(Landroid/content/pm/SigningDetails;[Landroid/content/pm/Signature;)Z
+    move-result v1
+    if-eqz v1, :done
+    invoke-interface {v0}, Lcom/android/server/pm/pkg/AndroidPackage;->getMetaData()Landroid/os/Bundle;
+    move-result-object v0
+    if-eqz v0, :done
+    const-string v1, "fake-signature"
+    invoke-virtual {v0, v1}, Landroid/os/Bundle;->getString(Ljava/lang/String;)Ljava/lang/String;
+    move-result-object v0
+    const-string v1, "@GOOGLE_CERT@"
+    invoke-virtual {v1, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v0
+    if-eqz v0, :done
+    new-array v3, v2, [Landroid/content/pm/Signature;
+    new-instance v4, Landroid/content/pm/Signature;
+    invoke-direct {v4, v1}, Landroid/content/pm/Signature;-><init>(Ljava/lang/String;)V
+    aput-object v4, v3, v6
+    :try_start
+    new-instance v4, Landroid/content/pm/SigningDetails;
+    const/4 v0, 0x3
+    invoke-direct {v4, v3, v0}, Landroid/content/pm/SigningDetails;-><init>([Landroid/content/pm/Signature;I)V
+    new-instance v5, Landroid/content/pm/SigningInfo;
+    invoke-direct {v5, v4}, Landroid/content/pm/SigningInfo;-><init>(Landroid/content/pm/SigningDetails;)V
+    :try_end
+    .catch Ljava/security/cert/CertificateException; {:try_start .. :try_end} :invalid_certificate
+    const-wide/16 v0, 0x40
+    and-long/2addr v0, p2
+    const-wide/16 v6, 0x0
+    cmp-long v0, v0, v6
+    if-eqz v0, :modern
+    iput-object v3, p1, Landroid/content/pm/PackageInfo;->signatures:[Landroid/content/pm/Signature;
+    :modern
+    const-wide/32 v0, 0x8000000
+    and-long/2addr v0, p2
+    cmp-long v0, v0, v6
+    if-eqz v0, :done
+    iput-object v5, p1, Landroid/content/pm/PackageInfo;->signingInfo:Landroid/content/pm/SigningInfo;
+    :done
+    return-void
+    :invalid_certificate
+    move-exception v0
+    return-void
+.end method

@@ -1,0 +1,39 @@
+{
+  "sources": [
+    {
+      "project": "aosp-framework",
+      "url": "https://android.googlesource.com/platform/frameworks/base",
+      "branch": "android17-release",
+      "commit": "94b4c163b7dfe5ce3607f7bb8456f9573f7de57d",
+      "license": "Apache-2.0",
+      "file_sha256": "a0cfc04b90bfe56f8b85f430a7a507f990f2805bc2e96a4b76c94de9425e095c",
+      "upstream_file": "services/core/java/com/android/server/pm/ComputerEngine.java"
+    },
+    {
+      "project": "lineage-framework",
+      "url": "https://github.com/LineageOS/android_frameworks_base",
+      "branch": "lineage-24.0",
+      "commit": "696a5773fa284f53429dbb6c3e5dcc96bf5bd0b3",
+      "license": "Apache-2.0",
+      "file_sha256": "eae771c7003c1c6498f099a4a23b961b2d31a097a6e37972b2df89d5c473c0f9",
+      "upstream_file": "core/java/com/android/internal/content/MicrogUtils.java"
+    },
+    {
+      "project": "microg",
+      "url": "https://github.com/microg/GmsCore",
+      "branch": "v0.3.17.252432",
+      "commit": "32bc8954ff872d0e1a05ddfae81561b6dbecef69",
+      "license": "Apache-2.0 and per-file notices",
+      "file_sha256": "8ca064d743ebccda9cb357751653bd65912b01898b2b91af4189d4102fc4c0ed",
+      "upstream_file": "README.md"
+    },
+    {
+      "project": "google-smali",
+      "url": "https://github.com/google/smali",
+      "commit": "7a325fc45dc02d0e428da5b54685e5887903efca",
+      "version": "3.0.10",
+      "license": "BSD-3-Clause and per-file notices"
+    }
+  ],
+  "scope": "Public upstream references only; firmware, private artifacts and paths excluded"
+}

@@ -1,0 +1,148 @@
+--- a/packages/StatementService/src/com/android/statementservice/network/retriever/UrlFetcher.kt
++++ b/packages/StatementService/src/com/android/statementservice/network/retriever/UrlFetcher.kt
+@@ -39,43 +39,46 @@
+         connectionTimeoutMillis: Int,
+         fileSizeLimit: Long,
+         network: Network? = null
+-    ) = withContext(Dispatchers.IO) {
+-        TrafficStats.setThreadStatsTag(Thread.currentThread().id.toInt())
+-        @Suppress("BlockingMethodInNonBlockingContext")
+-        val connection =
+-            ((network?.openConnection(url) ?: url.openConnection()) as HttpsURLConnection)
+-        try {
+-            connection.apply {
+-                connectTimeout = connectionTimeoutMillis
+-                readTimeout = connectionTimeoutMillis
+-                useCaches = true
+-                instanceFollowRedirects = false
+-                addRequestProperty("Cache-Control", "max-stale=60")
++    ): Result<Response> {
++        StatementNetworkPolicy.enforce(url)
++        return withContext(Dispatchers.IO) {
++            TrafficStats.setThreadStatsTag(Thread.currentThread().id.toInt())
++            @Suppress("BlockingMethodInNonBlockingContext")
++            val connection =
++                ((network?.openConnection(url) ?: url.openConnection()) as HttpsURLConnection)
++            try {
++                connection.apply {
++                    connectTimeout = connectionTimeoutMillis
++                    readTimeout = connectionTimeoutMillis
++                    useCaches = true
++                    instanceFollowRedirects = false
++                    addRequestProperty("Cache-Control", "max-stale=60")
++                }
++                val responseCode = connection.responseCode
++                when {
++                    responseCode != HttpURLConnection.HTTP_OK -> {
++                        Log.w(TAG, "The responses code is not 200 but $responseCode")
++                        Result.Success(Response(responseCode))
++                    }
++                    connection.contentLength > fileSizeLimit -> {
++                        Log.w(TAG, "The content size of the url is larger than $fileSizeLimit")
++                        Result.Success(Response(responseCode))
++                    }
++                    else -> {
++                        val content = async {
++                            connection.inputStream
++                                .bufferedReader(Charset.forName("UTF-8"))
++                                .readText()
++                        }
++
++                        Result.Success(Response(responseCode, content.await()))
++                    }
++                }
++            } catch (ignored: Throwable) {
++                Result.Failure(ignored)
++            } finally {
++                connection.disconnect()
+             }
+-            val responseCode = connection.responseCode
+-            when {
+-                responseCode != HttpURLConnection.HTTP_OK -> {
+-                    Log.w(TAG, "The responses code is not 200 but $responseCode")
+-                    Result.Success(Response(responseCode))
+-                }
+-                connection.contentLength > fileSizeLimit -> {
+-                    Log.w(TAG, "The content size of the url is larger than $fileSizeLimit")
+-                    Result.Success(Response(responseCode))
+-                }
+-                else -> {
+-                    val content = async {
+-                        connection.inputStream
+-                            .bufferedReader(Charset.forName("UTF-8"))
+-                            .readText()
+-                    }
+-
+-                    Result.Success(Response(responseCode, content.await()))
+-                }
+-            }
+-        } catch (ignored: Throwable) {
+-            Result.Failure(ignored)
+-        } finally {
+-            connection.disconnect()
+         }
+     }
+
+--- a/packages/StatementService/src/com/android/statementservice/domain/DomainVerifier.kt
++++ b/packages/StatementService/src/com/android/statementservice/domain/DomainVerifier.kt
+@@ -124,6 +124,8 @@
+                     }
+                 }
+             }
++        } catch (e: com.android.statementservice.network.retriever.StatementNetworkPolicy.DeniedException) {
++            Triple(WorkResult.failure(), VerifyStatus.UNKNOWN, null)
+         } catch (e: Exception) {
+             exception = e
+             Triple(WorkResult.retry(), VerifyStatus.FAILURE_UNKNOWN, null)
+--- /dev/null
++++ b/packages/StatementService/src/com/android/statementservice/network/retriever/StatementNetworkPolicy.java
+@@ -0,0 +1,49 @@
++/* SPDX-License-Identifier: Apache-2.0 */
++package com.android.statementservice.network.retriever;
++
++import java.net.IDN;
++import java.net.URL;
++import java.util.Locale;
++
++/** System App Links transport policy. Never grants domain verification. */
++public final class StatementNetworkPolicy {
++    private StatementNetworkPolicy() {}
++
++    /** Distinguishes a fixed system policy from transient transport failures. */
++    public static final class DeniedException extends SecurityException {
++        private static final long serialVersionUID = 1L;
++        public DeniedException() {
++            super("App Links verification denied by system network policy");
++        }
++    }
++
++    // Explicit service-domain inventory, not an assertion covering every Google IP/domain.
++    private static final String[] DOMAINS = {
++        "google.com", "googleapis.com", "gstatic.com", "googleusercontent.com",
++        "googleadservices.com", "googlesyndication.com", "doubleclick.net",
++        "firebaseio.com", "crashlytics.com", "app-measurement.com", "g.co", "goo.gl"
++    };
++    private static final String[] EXACT = {
++        "time.android.com", "connectivitycheck.android.com"
++    };
++
++    public static boolean denied(URL url) {
++        String rawHost = url.getHost();
++        // IPv6 literals cannot match a DNS suffix; preserve the existing fetch behavior.
++        if (rawHost.startsWith("[") && rawHost.endsWith("]")) return false;
++        String host = IDN.toASCII(rawHost).toLowerCase(Locale.ROOT);
++        while (host.endsWith(".")) host = host.substring(0, host.length() - 1);
++        for (String domain : DOMAINS) {
++            if (host.equals(domain) || host.endsWith("." + domain)) return true;
++        }
++        for (String domain : EXACT) if (host.equals(domain)) return true;
++        return false;
++    }
++
++    /** Called for every fetch, including delegated statements, before any connection. */
++    public static void enforce(URL url) {
++        if (denied(url)) {
++            throw new DeniedException();
++        }
++    }
++}
